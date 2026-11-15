@@ -1,0 +1,39 @@
+INSTALL — Batch Image Processing at Scale with CUDA NPP
+=======================================================
+
+Prerequisites
+-------------
+  * CUDA Toolkit 11.0 or newer (provides nvcc and the NPP libraries)
+  * NPP libraries — bundled with the CUDA Toolkit, no separate install
+  * An NVIDIA GPU with a compute capability supported by your toolkit
+  * Linux (x86_64). Other platforms with CUDA may work but are untested.
+  * Python 3 with Pillow — only needed to generate synthetic test images
+        pip install Pillow
+
+Verify your toolchain
+---------------------
+  nvcc --version        # should report CUDA 11.0+
+  nvidia-smi            # should list your GPU
+
+Build
+-----
+  make                  # produces bin/npp_processor
+
+Run
+---
+  bash run.sh           # builds if needed, generates test data, runs pipeline
+
+  Or run the binary directly:
+  ./bin/npp_processor -i data/input/ -o data/output/ -p full -v
+
+Clean
+-----
+  make clean            # removes object files and the binary
+
+Troubleshooting
+---------------
+  * "cannot find -lnppif" etc.: ensure the CUDA lib directory is on your
+    linker path, e.g.
+        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    and that CUDA's bin directory is on PATH for nvcc.
+  * "no CUDA-capable device": confirm the driver is installed (nvidia-smi).

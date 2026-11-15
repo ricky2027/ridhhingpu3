@@ -1,0 +1,29 @@
+# Build artifacts
+bin/
+*.o
+*.obj
+
+# Large image files
+data/input/
+data/output/
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.tif
+*.tiff
+
+# Results (keep directory, ignore generated logs)
+data/results/*.csv
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
