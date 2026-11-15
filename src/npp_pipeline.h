@@ -34,7 +34,8 @@ bool CheckNpp(NppStatus status, const char* call, const char* file, int line);
 
 class NppPipeline {
  public:
-  NppPipeline() = default;
+  // Initializes the NPP stream context used by all _Ctx API calls.
+  NppPipeline();
   ~NppPipeline() = default;
 
   // Non-copyable: the class holds only configuration, but we keep value
@@ -101,6 +102,11 @@ class NppPipeline {
   bool verbose_ = false;
   std::string stage_prefix_ = "image";
   std::string stage_dir_ = "data/output";
+
+  // Stream context required by the NPP _Ctx API (the only variants available
+  // from CUDA 13 onward). Populated in the constructor via
+  // nppGetStreamContext().
+  NppStreamContext npp_ctx_{};
 };
 
 #endif  // SRC_NPP_PIPELINE_H_

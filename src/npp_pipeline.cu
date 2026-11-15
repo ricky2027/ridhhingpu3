@@ -71,6 +71,19 @@ bool CheckNpp(NppStatus status, const char* call, const char* file, int line) {
   return false;
 }
 
+NppPipeline::NppPipeline() {
+  // nppGetStreamContext fills npp_ctx_ from the current device/stream so that
+  // the _Ctx NPP calls run on the default stream. On failure we fall back to
+  // the zero-initialized context.
+  NppStatus status = nppGetStreamContext(&npp_ctx_);
+  if (status != NPP_SUCCESS) {
+    std::fprintf(stderr,
+                 "[NPP warning] nppGetStreamContext failed: %s; using default "
+                 "stream context\n",
+                 NppStatusName(status));
+  }
+}
+
 NppStatus NppPipeline::Resize(const Npp8u* src, int src_width, int src_height,
                               int src_step, Npp8u* dst, int dst_width,
                               int dst_height, int dst_step) {
@@ -79,9 +92,9 @@ NppStatus NppPipeline::Resize(const Npp8u* src, int src_width, int src_height,
   NppiSize dst_size = {dst_width, dst_height};
   NppiRect dst_roi = {0, 0, dst_width, dst_height};
 
-  NppStatus status = nppiResize_8u_C3R(
+  NppStatus status = nppiResize_8u_C3R_Ctx(
       src, src_step, src_size, src_roi, dst, dst_step, dst_size, dst_roi,
-      NPPI_INTER_LINEAR);
+      NPPI_INTER_LINEAR, npp_ctx_);
   NPP_CHECK(status);
   return status;
 }
@@ -90,7 +103,7 @@ NppStatus NppPipeline::RgbToGray(const Npp8u* src, int src_step, Npp8u* dst,
                                  int dst_step, int width, int height) {
   NppiSize roi = {width, height};
   NppStatus status =
-      nppiRGBToGray_8u_C3C1R(src, src_step, dst, dst_step, roi);
+      nppiRGBToGray_8u_C3C1R_Ctx(src, src_step, dst, dst_step, roi, npp_ctx_);
   NPP_CHECK(status);
   return status;
 }
@@ -102,8 +115,8 @@ NppStatus NppPipeline::BoxFilter(const Npp8u* src, int src_step, Npp8u* dst,
   NppiSize mask = {kernel_size, kernel_size};
   NppiPoint anchor = {kernel_size / 2, kernel_size / 2};
 
-  NppStatus status = nppiFilterBox_8u_C1R(src, src_step, dst, dst_step, roi,
-                                          mask, anchor);
+  NppStatus status = nppiFilterBox_8u_C1R_Ctx(src, src_step, dst, dst_step, roi,
+                                              mask, anchor, npp_ctx_);
   NPP_CHECK(status);
   return status;
 }
@@ -132,10 +145,10 @@ NppStatus NppPipeline::CannyEdges(const Npp8u* src, int src_step, Npp8u* dst,
     return NPP_MEMORY_ALLOCATION_ERR;
   }
 
-  status = nppiFilterCannyBorder_8u_C1R(
+  status = nppiFilterCannyBorder_8u_C1R_Ctx(
       src, src_step, roi_size, src_offset, dst, dst_step, roi_size,
       NPP_FILTER_SOBEL, NPP_MASK_SIZE_3_X_3, low_threshold, high_threshold,
-      nppiNormL2, NPP_BORDER_REPLICATE, scratch);
+      nppiNormL2, NPP_BORDER_REPLICATE, scratch, npp_ctx_);
   NPP_CHECK(status);
 
   cudaFree(scratch);
@@ -148,9 +161,9 @@ NppStatus NppPipeline::Threshold(const Npp8u* src, int src_step, Npp8u* dst,
   NppiSize roi = {width, height};
   // Values strictly less than the threshold become 0; values greater become
   // 255 -> a clean binarization.
-  NppStatus status = nppiThreshold_LTValGTVal_8u_C1R(
+  NppStatus status = nppiThreshold_LTValGTVal_8u_C1R_Ctx(
       src, src_step, dst, dst_step, roi, threshold_value, 0,
-      threshold_value, 255);
+      threshold_value, 255, npp_ctx_);
   NPP_CHECK(status);
   return status;
 }
