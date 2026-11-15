@@ -16,7 +16,7 @@
 #include <nppi_filtering_functions.h>
 #include <nppi_color_conversion.h>
 #include <nppi_geometry_transforms.h>
-#include <nppi_threshold.h>
+#include <nppi_threshold_and_compare_operations.h>
 
 #include <string>
 
