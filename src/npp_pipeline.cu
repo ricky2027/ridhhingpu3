@@ -72,15 +72,26 @@ bool CheckNpp(NppStatus status, const char* call, const char* file, int line) {
 }
 
 NppPipeline::NppPipeline() {
-  // nppGetStreamContext fills npp_ctx_ from the current device/stream so that
-  // the _Ctx NPP calls run on the default stream. On failure we fall back to
-  // the zero-initialized context.
-  NppStatus status = nppGetStreamContext(&npp_ctx_);
-  if (status != NPP_SUCCESS) {
-    std::fprintf(stderr,
-                 "[NPP warning] nppGetStreamContext failed: %s; using default "
-                 "stream context\n",
-                 NppStatusName(status));
+  // CUDA 13 removed the nppGetStreamContext() helper, so we populate the stream
+  // context manually from the current device, as described in the NPP
+  // documentation. npp_ctx_ is value-initialized to zero (see the header), so
+  // any fields not set below default to 0 / the default stream.
+  npp_ctx_.hStream = 0;  // default stream
+  cudaGetDevice(&npp_ctx_.nCudaDeviceId);
+  cudaDeviceGetAttribute(&npp_ctx_.nCudaDevAttrComputeCapabilityMajor,
+                         cudaDevAttrComputeCapabilityMajor,
+                         npp_ctx_.nCudaDeviceId);
+  cudaDeviceGetAttribute(&npp_ctx_.nCudaDevAttrComputeCapabilityMinor,
+                         cudaDevAttrComputeCapabilityMinor,
+                         npp_ctx_.nCudaDeviceId);
+  cudaStreamGetFlags(npp_ctx_.hStream, &npp_ctx_.nStreamFlags);
+
+  cudaDeviceProp props;
+  if (cudaGetDeviceProperties(&props, npp_ctx_.nCudaDeviceId) == cudaSuccess) {
+    npp_ctx_.nMultiProcessorCount = props.multiProcessorCount;
+    npp_ctx_.nMaxThreadsPerMultiProcessor = props.maxThreadsPerMultiProcessor;
+    npp_ctx_.nMaxThreadsPerBlock = props.maxThreadsPerBlock;
+    npp_ctx_.nSharedMemPerBlock = props.sharedMemPerBlock;
   }
 }
 
